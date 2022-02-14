@@ -101,16 +101,17 @@ def subtract_expense(db, funds, ledger):
     Record expense
     '''
     # Get expense info
-    expense = int(input("Value of the expense: "))
+    # Turn value into a negative
+    expense = -int(input("Value of the expense: "))
 
     # Subtract funds
     funds_value = funds[funds_key]
-    new_funds_value = funds_value - expense
+    new_funds_value = funds_value + expense
     funds[funds_key] = new_funds_value
     update_funds_db(db, funds)
 
     # Record the expense
-    ledger = record_expense(db, ledger, expense)
+    ledger = record_expense(ledger, expense)
     update_ledger_db(db, ledger)
 
     # Display new balance
@@ -124,12 +125,11 @@ def record_deposit(new_funds, ledger):
     
     return ledger
 
-def record_expense(db, ledger, expense):
+def record_expense(ledger, expense):
     # Ensure data structures exist so we can record chronologically
     ledger = check_ledger_structure(ledger)
     # Record the expense
-    expense_negative = -expense
-    ledger[year][month][month_and_weekday].append(expense_negative)
+    ledger[year][month][month_and_weekday].append(expense)
 
     return ledger
 
@@ -152,12 +152,14 @@ def view_trans_history(ledger):
     # Display the history
     for day in ledger[year][month]:
         counter = 1
+        print(day + ": ")
         for transaction in ledger[year][month][day]:
-            print(day + ": ", end="")
             if transaction > 0: # For deposits
-                print("+$" + str(transaction))
+                print("   +$" + str(transaction))
             else:               # For expenses
-                print("$" + str(transaction))
+                # So the expense only displays negative once: before $
+                neg_transaction = -transaction
+                print("   -$" + str(neg_transaction))
             counter += 1
 
 def new_funds():
@@ -175,27 +177,20 @@ def new_ledger():
 
 def new_year():
     new = {
-        year: {
-            month: {
-                month_and_weekday: []
+        month: {
+            month_and_weekday: []
             }
-        }
     }
     return new
 
 def new_month():
     new = {
-        month: {
-            month_and_weekday: []
-        }
+        month_and_weekday: []
     }
     return new
 
 def new_day():
-    new = {
-        month_and_weekday: []
-    }
-    return new
+    return []
 
 def get_funds_dict(db):
     result = db.collection("financial").document(funds_key).get()
@@ -215,11 +210,11 @@ def check_ledger_structure(ledger):
     # Check if there is a year in the ledger for the current year
     # Also check if the current month exists inside the current year
     # If not, then add the current year and month
-    if not year in ledger:
+    if not year in ledger.keys():
         ledger[year] = new_year()
-    elif not month in ledger[year]:
+    elif not month in ledger[year].keys():
         ledger[year][month] = new_month()
-    elif not month_and_weekday in ledger[year][month]:
+    elif not month_and_weekday in ledger[year][month].keys():
         ledger[year][month][month_and_weekday] = new_day()
 
     return ledger
