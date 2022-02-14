@@ -14,6 +14,5 @@ Python is the language I used for this project.
 
 # Useful Websites
 
-{Make a list of websites that you found helpful in this project}
 * [Blockchain Simplified] (https://blockchainsimplified.com/blog/what-is-google-firebase/)
 * [WHAT IS FIREBASE | FULL REVIEW] (https://www.youtube.com/watch?v=P7FwFANxW4s&ab_channel=Jelvix)
