@@ -18,12 +18,25 @@ import os
 
 # Constants
 todays_date = date.today()
-current_year = todays_date.year
-current_month = todays_date.month
-months = [
-    "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
-    ]
-funds_key = "funds"
+def get_current_year():
+    return str(todays_date.year) # We need this as a string
+def get_current_month():
+    months = [
+        "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
+        ]
+    return months[todays_date.month - 1]
+def get_current_day():
+    return str(todays_date.day)
+def get_current_weekday():
+    days = ["Mon","Tue","Wed","Thu","Fri","Sat", "Sun"]
+    return days[todays_date.weekday()]
+year = get_current_year()
+month = get_current_month()
+day = get_current_day()
+weekday = get_current_weekday()
+month_and_weekday = weekday + '., ' + month + '. ' + day
+
+funds_key = "funds" 
 ledger_key = "ledger"
 
 def initialize_firestore():
@@ -56,12 +69,12 @@ def initialize_docs(db):
 
     # Check if funds doc exist
     if not result.exists:
-        funds   = {"funds": 0}
-        update_funds_db(db, funds)
+        funds_dict = new_funds()
+        update_funds_db(db, funds_dict)
     # Check if ledger doc exists
     if not result2.exists:
-        ledger = new_ledger()
-        update_ledger_db(db, ledger)
+        ledger_dict = new_ledger()
+        update_ledger_db(db, ledger_dict)
 
 def add_funds(db, funds, ledger):
     '''
@@ -83,14 +96,6 @@ def add_funds(db, funds, ledger):
     # Display new balance
     print_balance(funds)
 
-def record_deposit(new_funds, ledger):
-    # Validate ledger
-    ledger = check_year_month_ledger(ledger)
-    # Record the deposit
-    ledger[str(current_year)][months[current_month - 1]].append(new_funds)
-    
-    return ledger
-
 def subtract_expense(db, funds, ledger):
     '''
     Record expense
@@ -111,12 +116,20 @@ def subtract_expense(db, funds, ledger):
     # Display new balance
     print_balance(funds)
 
+def record_deposit(new_funds, ledger):
+    # Ensure data structures exist so we can record chronologically
+    ledger = check_ledger_structure(ledger)
+    # Record the deposit
+    ledger[year][month][month_and_weekday].append(new_funds)
+    
+    return ledger
+
 def record_expense(db, ledger, expense):
-    # Validate ledger
-    ledger = check_year_month_ledger(ledger)
+    # Ensure data structures exist so we can record chronologically
+    ledger = check_ledger_structure(ledger)
     # Record the expense
     expense_negative = -expense
-    ledger[str(current_year)][months[current_month - 1]].append(expense_negative)
+    ledger[year][month][month_and_weekday].append(expense_negative)
 
     return ledger
 
@@ -127,28 +140,62 @@ def print_balance(funds):
 def view_trans_history(ledger):
     # Ask for year and then a month
     year = str(input("Year you would you like to view for: "))
-    month = str(input("Month you would like to view for: "))
+    month = str(input("Month you would like to view for (first three letters): "))
+    # Ensure year and month exist in the ledger.
+    if not year in ledger:
+        print("Year does not exist in the ledger. Make transactions to start.")
+        return
+    elif not month in ledger[year]:
+        print("Month does not exist in the ledger. Make transactions to start.")
+        return
 
     # Display the history
-    # Display year
-    print(year)
-    counter = 1
-    for transaction in ledger[year][month]:
-        print(str(counter) + ". ", end="")
-        if transaction > 0:
-            print("+$" + str(transaction))
-        else:
-            print("$" + str(transaction))
-        counter += 1
+    for day in ledger[year][month]:
+        counter = 1
+        for transaction in ledger[year][month][day]:
+            print(day + ": ", end="")
+            if transaction > 0: # For deposits
+                print("+$" + str(transaction))
+            else:               # For expenses
+                print("$" + str(transaction))
+            counter += 1
 
+def new_funds():
+    return {"funds": 0}
 
 def new_ledger():
     ledger = {
-        str(current_year): {
-            months[current_month - 1]: []
+        year: {
+            month: {
+                month_and_weekday: []
+            }
         }
     }
     return ledger
+
+def new_year():
+    new = {
+        year: {
+            month: {
+                month_and_weekday: []
+            }
+        }
+    }
+    return new
+
+def new_month():
+    new = {
+        month: {
+            month_and_weekday: []
+        }
+    }
+    return new
+
+def new_day():
+    new = {
+        month_and_weekday: []
+    }
+    return new
 
 def get_funds_dict(db):
     result = db.collection("financial").document(funds_key).get()
@@ -164,12 +211,17 @@ def update_funds_db(db, funds):
 def update_ledger_db(db, ledger):
     db.collection("financial").document(ledger_key).set(ledger)
 
-def check_year_month_ledger(ledger):
+def check_ledger_structure(ledger):
     # Check if there is a year in the ledger for the current year
+    # Also check if the current month exists inside the current year
     # If not, then add the current year and month
-    if ((not str(current_year) in ledger) or
-       (not months[current_month - 1] in ledger[str(current_year)])):
-        ledger[str(current_year)] = {months[current_month - 1]: []}
+    if not year in ledger:
+        ledger[year] = new_year()
+    elif not month in ledger[year]:
+        ledger[year][month] = new_month()
+    elif not month_and_weekday in ledger[year][month]:
+        ledger[year][month][month_and_weekday] = new_day()
+
     return ledger
 
 '''*********************MAIN*******************'''
