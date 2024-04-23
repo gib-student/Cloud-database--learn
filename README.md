@@ -1,6 +1,6 @@
 # Overview
 
-In this project, I create a cloud database using Google Firebase. My database is a simple funds 
+In this project, I create a cloud database using Google Firebase and a database management system with Python.. My database is a simple funds 
 tracker and ledger which tracks deposits and expenses from the account. I created it to learn 
 the basics of cloud databases, SDKs and APIs.
 
